@@ -1039,7 +1039,7 @@ class Linkedin(object):
 
         return res.json()
 
-    def send_message(self, message_body, conversation_urn_id=None, recipients=None):
+    def send_message(self, message_body, conversation_urn_id=None, recipients=None) -> bool:
         """Send a message to a given conversation.
 
         :param message_body: Message text to send
@@ -1089,10 +1089,39 @@ class Linkedin(object):
                 "conversationCreate": message_event,
             }
             res = self._post(
-                f"/messaging/conversations",
+                "/messaging/conversations",
                 params=params,
                 data=json.dumps(payload),
             )
+
+        return res.status_code != 201
+
+    def share_post(self, text, media=None) -> bool:
+        """Share a new post to the user's feed."""
+
+        if media is None:
+            media = []
+
+        payload = {
+            "visibleToConnectionsOnly": False,
+            "externalAudienceProviders": [],
+            "commentaryV2": {
+                "text": text,
+                "attributes": []
+            },
+            "origin": "FEED",
+            "allowedCommentersScope": "ALL",
+            "postState": "PUBLISHED",
+            "media": media
+        }
+
+        try:
+            res = self._post(
+                uri="/contentcreation/normShares",
+                json=payload,
+            )
+        except Exception as e:
+            print(f"Error posting to LinkedIn: {e}")
 
         return res.status_code != 201
 
