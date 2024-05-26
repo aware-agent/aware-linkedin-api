@@ -11,6 +11,7 @@ from time import sleep
 from urllib.parse import urlencode
 
 from linkedin_api.client import Client
+from linkedin_api.models import GetProfileParams, Response, Profile
 from linkedin_api.utils.helpers import (
     get_id_from_urn,
     get_urn_from_raw_update,
@@ -419,6 +420,7 @@ class Linkedin(object):
 
         results = []
         for item in data:
+            print("!!! DEBUG DATA: ", item)
             if (
                 not include_private_profiles
                 and (item.get("entityCustomTrackingInfo") or {}).get(
@@ -685,7 +687,8 @@ class Linkedin(object):
 
         return skills
 
-    def get_profile(self, public_id=None, urn_id=None):
+    # !! TODO: ADJUST !! PUBLIC ID IS COMMENTED TO DON'T CONFUSE OUR MODEL. 
+    def get_profile(self, params: GetProfileParams) -> Response[Profile]:
         """Fetch data for a given LinkedIn profile.
 
         :param public_id: LinkedIn public ID for a profile
@@ -698,12 +701,13 @@ class Linkedin(object):
         """
         # NOTE this still works for now, but will probably eventually have to be converted to
         # https://www.linkedin.com/voyager/api/identity/profiles/ACoAAAKT9JQBsH7LwKaE9Myay9WcX8OVGuDq9Uw
-        res = self._fetch(f"/identity/profiles/{public_id or urn_id}/profileView")
+        # res = self._fetch(f"/identity/profiles/{params.public_id or params.urn_id}/profileView")
+        res = self._fetch(f"/identity/profiles/{params.urn_id}/profileView")
+
 
         data = res.json()
         if data and "status" in data and data["status"] != 200:
-            self.logger.info("request failed: {}".format(data["message"]))
-            return {}
+            return Response.failure(error=f"Request failed: {data["message"]}")
 
         # massage [profile] data
         profile = data["profile"]
@@ -805,7 +809,7 @@ class Linkedin(object):
 
         profile["urn_id"] = profile["entityUrn"].replace("urn:li:fs_profile:", "")
 
-        return profile
+        return Response.success(data=Profile.model_validate(profile, strict=False))
 
     def get_profile_connections(self, urn_id):
         """Fetch first-degree connections for a given LinkedIn profile.
@@ -1470,7 +1474,7 @@ class Linkedin(object):
         )
         return get_list_posts_sorted_without_promoted(l_urns, l_posts)
 
-    def get_job(self, job_id):
+    def get_job(self, job_id: str):
         """Fetch data about a given job.
         :param job_id: LinkedIn job ID
         :type job_id: str

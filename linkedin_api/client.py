@@ -96,6 +96,7 @@ class Client(object):
                 self._set_session_cookies(cookies)
                 self._fetch_metadata()
                 return
+            
 
         self._do_authentication_request(username, password)
         self._fetch_metadata()
